@@ -3,9 +3,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import { render, Box, Text, useApp } from "ink";
 import SelectInput from "ink-select-input";
 import TextInput from "ink-text-input";
-import { join, dirname } from "path";
+import { join, dirname, basename, extname } from "path";
 import { fileURLToPath } from "url";
-import { readdir, readFile } from "fs/promises";
+import {
+  readdir,
+  readFile,
+  mkdir,
+  stat,
+  cp,
+  readdir as readdirCb,
+  copyFile,
+  writeFile,
+} from "fs/promises";
 import {
   loadSuiteFromFile,
   testRunner,
@@ -69,6 +78,69 @@ type ModelStats = {
   costSum: number;
 };
 
+// Minimal suite id computation compatible with testRunner
+function computeSuiteIdLocal(filePath: string, suite: TestSuite) {
+  if (suite.id && suite.id.trim().length > 0) return suite.id.trim();
+  const base = basename(filePath, extname(filePath));
+  if (base && base.trim().length > 0) return base;
+  return (suite.name || "suite")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function pathExists(p: string) {
+  try {
+    await stat(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureDir(p: string) {
+  if (!(await pathExists(p))) await mkdir(p, { recursive: true });
+}
+
+// Portable recursive directory copy without relying on fs.cp across runtimes
+async function copyDirRecursive(src: string, dest: string) {
+  await ensureDir(dest);
+  const entries = await readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await copyDirRecursive(srcPath, destPath);
+    } else if (entry.isFile()) {
+      await ensureDir(dirname(destPath));
+      await copyFile(srcPath, destPath);
+    }
+  }
+}
+
+async function copyResultsToVisualizer(params: {
+  benchRoot: string;
+  visualizerRoot: string;
+  suiteId: string;
+  version: string;
+}) {
+  const { benchRoot, visualizerRoot, suiteId, version } = params;
+  const srcDir = join(benchRoot, "results", suiteId, version || "unversioned");
+  const destDir = join(
+    visualizerRoot,
+    "data",
+    "bench-results",
+    suiteId,
+    version || "unversioned"
+  );
+  if (!(await pathExists(srcDir))) {
+    throw new Error(`Results directory not found: ${srcDir}`);
+  }
+  await ensureDir(destDir);
+  await copyDirRecursive(srcDir, destDir);
+  return destDir;
+}
+
 function ProgressBar({
   completed,
   total,
@@ -118,6 +190,10 @@ function pctColor(p: number) {
 const App: React.FC = () => {
   const benchRoot = useBenchRoot();
   const testsDir = useMemo(() => join(benchRoot, "tests"), [benchRoot]);
+  const visualizerRoot = useMemo(
+    () => join(benchRoot, "..", "visualizer"),
+    [benchRoot]
+  );
   const { exit } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -128,12 +204,15 @@ const App: React.FC = () => {
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [version, setVersion] = useState<string>(formatDefaultVersion());
-  const [stage, setStage] = useState<"pickSuite" | "version" | "running">(
-    "pickSuite"
-  );
+  const [stage, setStage] = useState<
+    "pickSuite" | "version" | "running" | "copyPrompt" | "copying" | "done"
+  >("pickSuite");
 
   const [modelOrder, setModelOrder] = useState<string[]>([]);
   const [stats, setStats] = useState<Record<string, ModelStats>>({});
+
+  // Post-run copy state
+  const [copyResultMsg, setCopyResultMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -243,11 +322,33 @@ const App: React.FC = () => {
             }
           },
         });
-        // Keep the final UI as-is and exit the app
-        exit();
+
+        // Post-run: either prompt to copy or auto copy based on env
+        const autoCopy = process.env.SKATEBENCH_AUTO_COPY === "1";
+        const noCopy = process.env.SKATEBENCH_NO_COPY === "1";
+        if (autoCopy && !noCopy) {
+          setStage("copying");
+          try {
+            const suiteId = computeSuiteIdLocal(entry.filePath, suite);
+            const dest = await copyResultsToVisualizer({
+              benchRoot,
+              visualizerRoot,
+              suiteId,
+              version,
+            });
+            setCopyResultMsg(`Copied results to ${dest}`);
+          } catch (e) {
+            setCopyResultMsg(`Copy failed: ${(e as Error).message}`);
+          }
+          setStage("done");
+        } else if (!noCopy) {
+          setStage("copyPrompt");
+        } else {
+          setStage("done");
+        }
       })();
     }
-  }, [stage, selectedIndex, suites, version, exit]);
+  }, [stage, selectedIndex, suites, version, exit, benchRoot, visualizerRoot]);
 
   if (loading) {
     return (
@@ -502,6 +603,81 @@ const App: React.FC = () => {
             <Text color="green">${totals.costSum.toFixed(4)}</Text> total cost
           </Text>
         </Box>
+      </Box>
+    );
+  }
+
+  if (stage === "copyPrompt" && selectedIndex != null) {
+    const entry = suites[selectedIndex];
+    const suite = entry.suite;
+    const suiteId = computeSuiteIdLocal(entry.filePath, suite);
+    const dest = join(
+      visualizerRoot,
+      "data",
+      "bench-results",
+      suiteId,
+      version || "unversioned"
+    );
+    return (
+      <Box flexDirection="column">
+        <Text>
+          Run complete. Copy results for{" "}
+          <Text color="magentaBright">{suite.name}</Text> @ version{" "}
+          <Text color="cyan">{version}</Text> to visualizer?
+        </Text>
+        <Box marginTop={1}>
+          <Text>Destination: {dest}</Text>
+        </Box>
+        <Box marginTop={1}>
+          <SelectInput
+            items={[
+              { key: "yes", label: "Yes, copy now", value: "yes" },
+              { key: "no", label: "No", value: "no" },
+            ]}
+            onSelect={async (item: any) => {
+              if (item.value === "yes") {
+                setStage("copying");
+                try {
+                  const copiedTo = await copyResultsToVisualizer({
+                    benchRoot,
+                    visualizerRoot,
+                    suiteId,
+                    version,
+                  });
+                  setCopyResultMsg(`Copied results to ${copiedTo}`);
+                } catch (e) {
+                  setCopyResultMsg(`Copy failed: ${(e as Error).message}`);
+                }
+                setStage("done");
+              } else {
+                setStage("done");
+              }
+            }}
+          />
+        </Box>
+      </Box>
+    );
+  }
+
+  if (stage === "copying") {
+    return (
+      <Box>
+        <Text>Copying results to visualizer…</Text>
+      </Box>
+    );
+  }
+
+  if (stage === "done") {
+    return (
+      <Box flexDirection="column">
+        <Text>All done.</Text>
+        {copyResultMsg ? (
+          <Text
+            color={copyResultMsg.startsWith("Copy failed") ? "red" : "green"}
+          >
+            {copyResultMsg}
+          </Text>
+        ) : null}
       </Box>
     );
   }
