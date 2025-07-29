@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, type ComponentPropsWithoutRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Trophy,
   DollarSign,
@@ -185,14 +191,31 @@ function truncateLabel(input: unknown, max = 14) {
 
 export default function BenchmarkCharts({
   data,
+  suiteControl,
 }: {
   data: { rankings: ModelData[]; metadata: any };
+  suiteControl?: React.ReactNode;
 }) {
   const { rankings, metadata } = data;
 
   const [selectedModels, setSelectedModels] = useState<string[]>(
     rankings.map((m) => m.model)
   );
+
+  const router = useRouter();
+  const search = useSearchParams();
+  const urlChart = (search.get("chart") || "accuracy") as
+    | "accuracy"
+    | "cost"
+    | "speed"
+    | "combined";
+  const [tab, setTab] = useState<"accuracy" | "cost" | "speed" | "combined">(
+    urlChart
+  );
+  useEffect(() => {
+    if (urlChart !== tab) setTab(urlChart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlChart]);
 
   const filteredRankings = rankings.filter((m) =>
     selectedModels.includes(m.model)
@@ -300,12 +323,23 @@ export default function BenchmarkCharts({
                 {new Date(metadata.timestamp).toLocaleString()}
               </Badge>
             ) : null}
+            {suiteControl ? <div className="ml-2">{suiteControl}</div> : null}
           </div>
         </div>
       </header>
 
       <main className="relative mx-auto max-w-7xl px-4 pb-16">
-        <Tabs defaultValue="accuracy" className="space-y-6">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            const nv = v as "accuracy" | "cost" | "speed" | "combined";
+            setTab(nv);
+            const params = new URLSearchParams(search.toString());
+            params.set("chart", nv);
+            router.replace("?" + params.toString(), { scroll: false });
+          }}
+          className="space-y-6"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList className="max-w-full overflow-x-auto overflow-y-hidden whitespace-nowrap rounded-xl border border-neutral-800 bg-neutral-900/70 p-1">
               <TabsTrigger
