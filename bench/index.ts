@@ -652,7 +652,8 @@ export async function testRunner(options: TestRunnerOptions) {
               );
             }
 
-            const duration = Date.now() - startTime;
+            // Use the original cached duration, not the time to retrieve from cache
+            const duration = testRun.reuseFrom.duration || 0;
             const reused = testRun.reuseFrom;
             const text = reused.text;
             const correct = isCorrect({
@@ -912,7 +913,8 @@ export async function testRunner(options: TestRunnerOptions) {
           );
         }
 
-        const duration = Date.now() - startTime;
+        // Use the original cached duration, not the time to retrieve from cache
+        const duration = r.duration || 0;
         const text = r.text;
         const correct = isCorrect({
           answers: testRun.answers,
