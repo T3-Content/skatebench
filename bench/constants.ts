@@ -1,6 +1,6 @@
 export const OUTPUT_DIRECTORY = "./results";
 
-export const MAX_CONCURRENCY = 20;
+export const MAX_CONCURRENCY = 40;
 export const TEST_RUNS_PER_MODEL = 30;
 export const TIMEOUT_SECONDS = 400;
 export const STAGGER_DELAY_MS = 150;
