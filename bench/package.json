@@ -17,12 +17,13 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.0-beta.12",
-    "@openrouter/ai-sdk-provider": "^1.0.0-beta.1",
-    "ai": "^5.0.0-beta.19",
-    "ink": "^4.4.1",
-    "ink-select-input": "^6.0.1",
-    "ink-text-input": "^6.1.0",
-    "react": "^18.3.1"
+    "@ai-sdk/google": "^2.0.46",
+    "@openrouter/ai-sdk-provider": "^1.4.0",
+    "ai": "^5.0.107",
+    "ink": "^6.5.1",
+    "ink-select-input": "^6.2.0",
+    "ink-text-input": "^6.0.0",
+    "openai": "^6.10.0",
+    "react": "^19.2.1"
   }
 }
