@@ -1,6 +1,6 @@
 export const OUTPUT_DIRECTORY = "./results";
 
-export const MAX_CONCURRENCY = 40;
+export const MAX_CONCURRENCY = 100;
 export const TEST_RUNS_PER_MODEL = 30;
 export const TIMEOUT_SECONDS = 400;
 export const STAGGER_DELAY_MS = 150;
@@ -77,7 +77,10 @@ export const modelsToRun: RunnableModel[] = [
   },
   {
     name: "deepseek-v3.1-thinking",
-    llm: openrouter("deepseek/deepseek-chat-v3.1", defaultProviderOptions),
+    llm: openrouter("deepseek/deepseek-chat-v3.1", {
+      ...defaultProviderOptions,
+      reasoning: { effort: "high" },
+    }),
     reasoning: true,
   },
   {
@@ -248,7 +251,6 @@ export const modelsToRun: RunnableModel[] = [
     }),
     reasoning: true,
   },
-
   {
     name: "gpt-5.2-none",
     llm: openrouter("openai/gpt-5.2", {
