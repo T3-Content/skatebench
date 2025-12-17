@@ -1,12 +1,18 @@
 export const OUTPUT_DIRECTORY = "./results";
 
+<<<<<<< Updated upstream
 export const MAX_CONCURRENCY = 40;
+=======
+export const MAX_CONCURRENCY = 20;
+>>>>>>> Stashed changes
 export const TEST_RUNS_PER_MODEL = 30;
 export const TIMEOUT_SECONDS = 400;
 export const STAGGER_DELAY_MS = 150;
 
 import { type LanguageModel } from "ai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
+
+import { google } from "@ai-sdk/google";
 
 export type RunnableModel = {
   name: string;
@@ -284,6 +290,26 @@ export const modelsToRun: RunnableModel[] = [
       ...defaultProviderOptions,
       reasoning: {
         effort: "high",
+      },
+    }),
+    reasoning: true,
+  },
+  {
+    name: "gemini-3-flash-high",
+    llm: openrouter("google/gemini-3-flash-preview", {
+      ...defaultProviderOptions,
+      reasoning: {
+        effort: "high",
+      },
+    }),
+    reasoning: true,
+  },
+  {
+    name: "gemini-3-flash-low",
+    llm: openrouter("google/gemini-3-flash-preview", {
+      ...defaultProviderOptions,
+      reasoning: {
+        effort: "low",
       },
     }),
     reasoning: true,

@@ -178,6 +178,7 @@ async function runTest(input: {
 
       temperature: 1.0,
       providerOptions: {
+        ...model.providerOptions,
         // openrouter: {
         //   reasoning: {
         //     max_tokens: 2048,
@@ -197,6 +198,7 @@ async function runTest(input: {
 
     let cost = 0;
     if (testResult.providerMetadata) {
+      console.log("PROVIDER METADATA", testResult.providerMetadata);
       const openrouterMeta = testResult.providerMetadata.openrouter as any;
       if (openrouterMeta?.usage) {
         // Add upstream cost for when we BYOK
@@ -212,13 +214,27 @@ async function runTest(input: {
       }
     }
 
+    // Get completion tokens - prefer provider-specific metadata if available
+    let completionTokens = testResult.usage?.outputTokens ?? 0;
+    if (testResult.providerMetadata?.google) {
+      const googleMeta = testResult.providerMetadata.google as any;
+      if (
+        googleMeta?.usageMetadata?.candidatesTokenCount &&
+        googleMeta?.usageMetadata?.thoughtsTokenCount
+      ) {
+        completionTokens =
+          googleMeta.usageMetadata.candidatesTokenCount +
+          googleMeta.usageMetadata.thoughtsTokenCount;
+      }
+    }
+
     return {
       model: model.name,
       prompt,
       result: testResult,
       correct: correctness,
       cost,
-      completionTokens: testResult.usage?.outputTokens ?? 0,
+      completionTokens,
     };
   }
 
@@ -1114,6 +1130,7 @@ export async function testRunner(options: TestRunnerOptions) {
             totalDuration: 0,
             totalTests: 0,
             totalCost: 0,
+            totalCompletionTokens: 0,
           };
         }
         acc[result.model].totalTests++;
@@ -1126,6 +1143,7 @@ export async function testRunner(options: TestRunnerOptions) {
         }
         acc[result.model].totalDuration += result.duration;
         acc[result.model].totalCost += result.cost;
+        acc[result.model].totalCompletionTokens += result.completionTokens;
         return acc;
       },
       {} as Record<
@@ -1137,6 +1155,7 @@ export async function testRunner(options: TestRunnerOptions) {
           totalDuration: number;
           totalTests: number;
           totalCost: number;
+          totalCompletionTokens: number;
         }
       >
     );
@@ -1159,6 +1178,11 @@ export async function testRunner(options: TestRunnerOptions) {
         totalCost: stats.totalCost,
         averageCostPerTest:
           stats.totalTests > 0 ? stats.totalCost / stats.totalTests : 0,
+        totalCompletionTokens: stats.totalCompletionTokens,
+        tokensPerSecond:
+          stats.totalDuration > 0
+            ? stats.totalCompletionTokens / (stats.totalDuration / 1000)
+            : 0,
       }))
       .sort((a, b) => {
         if (b.successRate !== a.successRate) {

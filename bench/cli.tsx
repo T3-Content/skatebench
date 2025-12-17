@@ -194,6 +194,7 @@ const App: React.FC = () => {
                 },
               }));
             } else if (event.type === "done") {
+              console.log("DONE", event);
               setStats((prev) => ({
                 ...prev,
                 [event.model]: {
@@ -369,6 +370,7 @@ const App: React.FC = () => {
       "Running Tests",
       "Avg Cost",
       "Avg Tokens",
+      "TPS",
       "Avg Duration",
       "Slowest",
     ];
@@ -400,6 +402,10 @@ const App: React.FC = () => {
         tokensDenom > 0
           ? Math.round(s!.completionTokensSum / tokensDenom)
           : null;
+      // TPS = total completion tokens / total duration in seconds
+      const tpsDurationSec = s ? s.executedDurationSumMs / 1000 : 0;
+      const tps =
+        tpsDurationSec > 0 ? s!.completionTokensSum / tpsDurationSec : null;
       return {
         model: name,
         done: `${completed}/${denom}`,
@@ -408,6 +414,7 @@ const App: React.FC = () => {
         run: run === 0 ? "-" : String(run),
         avgCost: avgCost === null ? "-" : `$${avgCost.toFixed(4)}`,
         avgTokens: avgTokens === null ? "-" : avgTokens.toLocaleString(),
+        tps: tps === null ? "-" : tps.toFixed(1),
         avg: avgSec === null ? "-" : `${avgSec.toFixed(2)}s`,
         slow: slowSec === null ? "-" : `${slowSec.toFixed(2)}s`,
         pct,
@@ -425,8 +432,9 @@ const App: React.FC = () => {
         header[6].length,
         ...rows.map((r) => r.avgTokens.length)
       ),
-      avg: Math.max(header[7].length, ...rows.map((r) => r.avg.length)),
-      slow: Math.max(header[8].length, ...rows.map((r) => r.slow.length)),
+      tps: Math.max(header[7].length, ...rows.map((r) => r.tps.length)),
+      avg: Math.max(header[8].length, ...rows.map((r) => r.avg.length)),
+      slow: Math.max(header[9].length, ...rows.map((r) => r.slow.length)),
     };
 
     const overallAnswered = totals.correct + totals.incorrect;
@@ -477,11 +485,15 @@ const App: React.FC = () => {
             </Text>
             {"  "}
             <Text underline color="whiteBright">
-              {pad(header[7], widths.avg)}
+              {pad(header[7], widths.tps)}
             </Text>
             {"  "}
             <Text underline color="whiteBright">
-              {pad(header[8], widths.slow)}
+              {pad(header[8], widths.avg)}
+            </Text>
+            {"  "}
+            <Text underline color="whiteBright">
+              {pad(header[9], widths.slow)}
             </Text>
           </Text>
           {rows.map((r) => (
@@ -508,6 +520,10 @@ const App: React.FC = () => {
               {"  "}
               <Text color={r.avgTokens === "-" ? "gray" : "blue"}>
                 {padLeft(r.avgTokens, widths.avgTokens)}
+              </Text>
+              {"  "}
+              <Text color={r.tps === "-" ? "gray" : "blueBright"}>
+                {padLeft(r.tps, widths.tps)}
               </Text>
               {"  "}
               <Text color={r.avg === "-" ? "gray" : "cyan"}>
