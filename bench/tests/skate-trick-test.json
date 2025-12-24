@@ -1,7 +1,7 @@
 {
   "name": "Technical Trick Terminology",
   "description": "Checks what tricks different AI models can correctly name based on a description.",
-  "system_prompt": "You are a skateboard trick naming assistant. You are given a description of a trick and you need to give the name of the trick. If the trick has multiple names, you should give the common name that most skateboarders would use. Keep answers concise and to the point - don't include names of other tricks.",
+  "system_prompt": "You are a skateboard trick naming assistant. You are given a description of a trick and you need to give the name of the trick. If the trick has multiple names, you should give the common name that most skateboarders would use. Keep answers concise and to the point - don't include names of other tricks. Note: Regular stance means the right foot is on the back or tail of the skateboard and the left foot is near the front. Goofy stance means the left foot is on the back or tail of the skateboard and the right foot is near the front.",
   "tests": [
     {
       "prompt": "Board spins 360 degrees backside and flips in the kickflip direction. The skater does not spin.",
@@ -39,6 +39,26 @@
     {
       "prompt": "Board spins 360 degrees backside and flips in the kickflip direction. The skater spins 180 degrees",
       "answers": ["big flip", "bigflip"]
+    },
+    {
+      "prompt": "A regular stance skater performs a nollie kickflip. What direction does the board flip?",
+      "answers": ["counter clockwise", "left", "counter-clockwise"]
+    },
+    {
+      "prompt": "A goofy stance skater performs a nollie heelflip. What direction does the board flip?",
+      "answers": ["counter clockwise", "left", "counter-clockwise"]
+    },
+    {
+      "prompt": "A regular stance skater performs a backside 900 on a. What direction is the skater spinning?",
+      "answers": ["clockwise", "right"]
+    },
+    {
+      "prompt": "A goofy-stance skateboarder performs a frontside 540 on a halfpipe. Upon landing and riding away, which foot ends up on the tail of the skateboard relative to the direction of travel?",
+      "answers": ["left"]
+    },
+    {
+      "prompt": "A regular stance skater is on a halfpipe, he goes striaght up then comes straight back down without spinning. Which foot is on the tail of the skateboard relative to the direction of travel?",
+      "answers": ["left"]
     }
   ]
 }
