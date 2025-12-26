@@ -49,7 +49,7 @@
       "answers": ["counter clockwise", "left", "counter-clockwise"]
     },
     {
-      "prompt": "A regular stance skater performs a backside 900 on a. What direction is the skater spinning?",
+      "prompt": "A regular stance skater performs a backside 900 on a halfpipe. What direction is the skater spinning?",
       "answers": ["clockwise", "right"]
     },
     {
@@ -57,7 +57,7 @@
       "answers": ["left"]
     },
     {
-      "prompt": "A regular stance skater is on a halfpipe, he goes striaght up then comes straight back down without spinning. Which foot is on the tail of the skateboard relative to the direction of travel?",
+      "prompt": "A regular stance skater is on a halfpipe, he goes straight up then comes straight back down without spinning. Which foot is on the tail of the skateboard relative to the direction of travel?",
       "answers": ["left"]
     }
   ]
