@@ -75,6 +75,54 @@ function currency(n: number) {
   return `$${n.toFixed(2)}`;
 }
 
+const getModelLogo = (modelName: string) => {
+  const model = modelName.toLowerCase();
+  if (model.includes("gemini")) return "/assets/logos/gemini.svg";
+  if (model.includes("gpt") || model.includes("openai")) return "/assets/logos/openai.svg";
+  if (model.includes("claude") || model.includes("anthropic")) return "/assets/logos/claude.svg";
+  if (model.includes("deepseek")) return "/assets/logos/deepseek.svg";
+  if (model.includes("grok") || model.includes("xai")) return "/assets/logos/grok.svg";
+  if (model.includes("kimi")) return "/assets/logos/kimi.svg";
+  if (model.includes("glm") || model.includes("zhipu")) return "/assets/logos/glm.svg";
+  if (model.includes("minimax")) return "/assets/logos/minimax.svg";
+  return null;
+};
+
+const BarLogoLabel = (props: any) => {
+  const { x, y, width, height, value, index, data, isMobile } = props;
+  const modelName = data[index]?.model;
+  const logoUrl = getModelLogo(modelName);
+
+  if (!logoUrl) return null;
+
+  const size = 16;
+  const padding = 8;
+  
+  let logoX, logoY;
+  if (isMobile) {
+    // horizontal bars: place logo at the start of the bar
+    logoX = x + padding;
+    logoY = y + (height - size) / 2;
+  } else {
+    // vertical bars: place logo at the bottom of the bar
+    logoX = x + (width - size) / 2;
+    logoY = y + height - size - padding;
+    // Don't render if bar is too short
+    if (height < size + padding * 2) return null;
+  }
+
+  return (
+    <image
+      href={logoUrl}
+      x={logoX}
+      y={logoY}
+      width={size}
+      height={size}
+      className="opacity-90"
+    />
+  );
+};
+
 function barValueLabel(suffix: string, decimals: number) {
   return (props: any) => {
     const x = Number(props?.x ?? 0);
@@ -409,6 +457,10 @@ export default function BenchmarkVisualizer() {
                       ))}
                       <LabelList
                         dataKey="successRate"
+                        content={<BarLogoLabel data={successRateData} isMobile={isMobile} />}
+                      />
+                      <LabelList
+                        dataKey="successRate"
                         position={isMobile ? "right" : "top"}
                         content={isMobile 
                           ? barValueLabelHorizontalSmart("%", 0, 100) 
@@ -485,6 +537,10 @@ export default function BenchmarkVisualizer() {
                       ))}
                       <LabelList
                         dataKey="totalCost"
+                        content={<BarLogoLabel data={costData} isMobile={isMobile} />}
+                      />
+                      <LabelList
+                        dataKey="totalCost"
                         position={isMobile ? "right" : "top"}
                         content={isMobile 
                           ? barValueLabelHorizontalSmart("", 2, costMax || 1) 
@@ -559,6 +615,10 @@ export default function BenchmarkVisualizer() {
                           className="transition-all duration-300 hover:opacity-80"
                         />
                       ))}
+                      <LabelList
+                        dataKey="duration"
+                        content={<BarLogoLabel data={speedData} isMobile={isMobile} />}
+                      />
                       <LabelList
                         dataKey="duration"
                         position={isMobile ? "right" : "top"}
@@ -641,14 +701,27 @@ export default function BenchmarkVisualizer() {
                         return null;
                       }}
                     />
-                    <Scatter data={performanceData} isAnimationActive={false}>
-                      {performanceData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={getModelColor(entry.originalModel)}
-                          className="transition-opacity duration-300 hover:opacity-70 cursor-crosshair"
-                        />
-                      ))}
+                    <Scatter 
+                      data={performanceData} 
+                      isAnimationActive={false}
+                      shape={(props: any) => {
+                        const { cx, cy, payload } = props;
+                        const logoUrl = getModelLogo(payload.originalModel);
+                        if (logoUrl) {
+                          return (
+                            <image
+                              href={logoUrl}
+                              x={cx - 10}
+                              y={cy - 10}
+                              width={20}
+                              height={20}
+                              className="opacity-90 transition-opacity duration-300 hover:opacity-100 cursor-crosshair"
+                            />
+                          );
+                        }
+                        return <circle cx={cx} cy={cy} r={6} fill={getModelColor(payload.originalModel)} />;
+                      }}
+                    >
                       {!isMobile && (
                         <LabelList
                           dataKey="model"
@@ -675,26 +748,6 @@ export default function BenchmarkVisualizer() {
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Technical Footer Details */}
-        <div className="mt-12 pt-8 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-8 font-mono text-[10px] text-neutral-600 uppercase">
-          <div>
-            <span className="block text-neutral-400 mb-1">Source</span>
-            <span>SkateBench Alpha v0.1</span>
-          </div>
-          <div>
-            <span className="block text-neutral-400 mb-1">Engine</span>
-            <span>Next.js + Recharts</span>
-          </div>
-          <div>
-            <span className="block text-neutral-400 mb-1">Data Points</span>
-            <span>{rankings.length * totalTestsPerModel} Tests Run</span>
-          </div>
-          <div className="text-right">
-            <span className="block text-neutral-400 mb-1">Status</span>
-            <span className="text-green-500">Live Feed Verified</span>
-          </div>
-        </div>
       </main>
 
       <div className="fixed bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" />
