@@ -10,7 +10,8 @@ import {
 import { generateText } from "ai";
 import { mkdir, writeFile, readdir, readFile as fsReadFile } from "fs/promises";
 import { existsSync } from "fs";
-import { join, basename, extname } from "path";
+import { join, basename, extname, dirname } from "path";
+import { fileURLToPath } from "url";
 import { createHash } from "crypto";
 
 export type TestCase = {
@@ -1227,6 +1228,27 @@ export async function testRunner(options: TestRunnerOptions) {
       "utf-8"
     );
     if (!silent) console.log(`Summary saved to: ${summaryFilepath}`);
+
+    // Update visualizer data
+    try {
+      const benchDir = dirname(fileURLToPath(import.meta.url));
+      const visualizerDataPath = join(
+        benchDir,
+        "..",
+        "visualizer",
+        "data",
+        "benchmark-results.json"
+      );
+      await writeFile(
+        visualizerDataPath,
+        JSON.stringify(summaryData, null, 2),
+        "utf-8"
+      );
+      if (!silent)
+        console.log(`Visualizer data updated at: ${visualizerDataPath}`);
+    } catch (e) {
+      if (!silent) console.warn("Failed to update visualizer data:", e);
+    }
   } catch (error) {
     if (!silent) console.error("Failed to save results to file:", error);
   }
